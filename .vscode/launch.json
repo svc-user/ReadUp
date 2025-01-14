@@ -12,7 +12,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "https://jsrn.net/2024/11/14/choosing-a-todo-app.html"
+                "https://www.dr.dk/nyheder/penge/ejere-af-40000-boliger-behandlet-efter-omstridt-paragraf-endnu-en-lortesag-skat"
             ],
             "envFile": "${workspaceFolder}/.env"
         }

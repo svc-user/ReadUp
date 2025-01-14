@@ -1,7 +1,9 @@
 from openai import OpenAI
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 import pyaudio
-import os, sys, pathlib, hashlib
+import tiktoken
+import os, sys, pathlib, hashlib, glob
 
 API_KEY = os.environ["OPENAI_KEY"]
 PROJECT_ID = os.environ["PROJECT_ID"] 
@@ -12,7 +14,9 @@ def getWebsite(site_url):
     options.add_argument("-headless")
     driver = webdriver.Firefox(keep_alive=False, options=options)
     driver.get(site_url)
-    markup = driver.page_source
+    body_elem = driver.find_element(By.TAG_NAME, "body")
+    markup = body_elem.get_attribute('innerHTML')
+    
     driver.quit()
     return markup
 
@@ -23,16 +27,30 @@ def getArticle(article_hash, markup):
             cached = f.read()
             return cached
     
-    openai = OpenAI(api_key=API_KEY, project=PROJECT_ID)
-    completion = openai.chat.completions.create(
-        model="gpt-4o-mini", 
-        stream=False,
-        messages=[ {
+    messages = [ {
                 "role": "user", 
                 "content": "Given the following website markup, return only the text of the site that is an article, blog post or similar. The ouput MUST be formatted as human readable text with no kind of markup. It's important to extract the article as verbatim as possible. If there are images include them by mentioning that there's an image and the images alt text - if any.\n-------\n"
                     + markup
             }
         ]
+    encoder = tiktoken.encoding_for_model("gpt-4o-mini")
+
+    num_tokens = 0
+    for message in messages:
+        num_tokens += 3
+        for key, value in message.items():
+            num_tokens += len(encoder.encode(value))
+            if key == "name":
+                num_tokens += 1
+    num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
+    
+    print("Extraction message is %d tokens" % num_tokens)
+
+    openai = OpenAI(api_key=API_KEY, project=PROJECT_ID)
+    completion = openai.chat.completions.create(
+        model="gpt-4o-mini", 
+        stream=False,
+        messages=messages
     )
 
     text = completion.choices[0].message.content
@@ -43,8 +61,17 @@ def getArticle(article_hash, markup):
 
 
 def tts(article_hash, text):
-    openai = OpenAI(api_key=API_KEY, project=PROJECT_ID)
+
     player_stream = pyaudio.PyAudio().open(format=pyaudio.paInt16, channels=1, rate=24000, output=True)
+    if (BASE_DIR / (article_hash + "_0.pcm")).exists():
+        files = glob.glob(str(BASE_DIR / (article_hash + "_*.pcm")))
+        for file in files:
+            with open(file, "rb") as chunk:
+                while (audio_chunk := chunk.read(1024)):
+                    player_stream.write(audio_chunk)
+        return
+
+    openai = OpenAI(api_key=API_KEY, project=PROJECT_ID)
 
     in_text = text
     chunks = []
