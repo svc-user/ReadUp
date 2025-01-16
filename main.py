@@ -44,4 +44,4 @@ async def ws():
 
 
 if __name__ == '__main__':
-    app.run(debug=False, port=1235, host="0.0.0.0", threaded=True, use_reloader=False)
+    app.run(debug=True, port=1235, host="0.0.0.0", use_reloader=False)

@@ -1,4 +1,4 @@
-articles/
+articles/*
 .env
 .vscode/
 __pycache__/

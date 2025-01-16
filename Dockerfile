@@ -7,12 +7,14 @@ WORKDIR /app
 # Copy requirements.txt first (to leverage Docker's layer caching)
 COPY requirements.txt .
 
+# Install Firefox to get page sources
+RUN apt-get update && apt-get install -y firefox-esr
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy everything except the "articles" folder
 COPY . /app
-RUN rm -rf /app/articles
 
 # Expose the desired port
 EXPOSE 1235
