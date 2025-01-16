@@ -39,3 +39,4 @@ Get your API key [here](https://platform.openai.com/settings/organization/api-ke
  - [ ] Highlighting of (approximately) the currently read line/word
  - [ ] Prettiness 
  - [ ] Configurable app settings
+ - [ ] Not needing to refresh after each article 😅
