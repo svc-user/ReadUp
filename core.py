@@ -38,7 +38,10 @@ def getArticle(article_hash, markup):
     
     messages = [ {
                 "role": "user", 
-                "content": "Given the following website markup, return only the text of the site that is an article, blog post or similar. Include the title and date, if noted. The ouput MUST be formatted as human readable text with no kind of markup. It's important to extract the article as verbatim as possible.\n-------\n"
+                "content": "Given the following website markup, return the text of the site that is an article, blog post or similar. Include the title and date, if noted. " +
+                "Take the whole article. Omit comments in the end of the article if there are any. "+
+                "The ouput MUST be formatted as human readable text with no kind of markup. " +
+                "It's important to extract the article as verbatim as possible.\n-------\n"
                     + markup
             }
         ]
