@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Read Aloud</title>
+    <link rel="stylesheet" href="https://cdn.hugeicons.com/font/hgi-stroke-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+
+        .settings-button {
+            /* width: 100%; */
+            /* height: 100%; */
+        }
+
+        .settings-button-ctr {
+            vertical-align: middle;
+            /* text-align: center; */
+        }
+
+        .article-container {
+            overflow-y: scroll;
+            max-height: 80vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="one column">&nbsp;</div>
+            <div class="eight columns">
+                <!-- <pre>https://jsrn.net/2024/11/14/choosing-a-todo-app.html</pre> -->
+                <input type="text" class="url-input u-full-width" placeholder="Enter URL to read aloud...">
+            </div>
+            <div class="one column submit-button-ctr">
+                <a class="submit-button button button-primary" title="Submit">
+                    <i class="hgi-stroke hgi-arrow-right-01"></i>
+                </a>
+            </div>
+            <div class="one column setting-button-ctr">
+                <a class="settings-button button" title="Settings">
+                    <i class="hgi-stroke hgi-settings-02"></i>
+                </a>
+            </div>
+        </div>
+        <div class="row">
+            <div class="one column">&nbsp;</div>
+            <div class="eight columns">
+                <audio class="audio-player u-full-width" controls="true">
+            </div>
+        </div>
+        <div class="row">
+            <div class="one column">&nbsp;</div>
+            <div class="eight columns">
+                <div class="article-container">
+                    <p class="article-text"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", () => {
+            const input = document.querySelector(".url-input");
+            const submitBtn = document.querySelector(".submit-button");
+            const articleTxt = document.querySelector(".article-text");
+            const audioElement = document.querySelector('.audio-player');
+
+            let isPlaying = false;
+            let tmpBuffer = [];
+
+            audioElement.addEventListener("ended", () => {
+                isPlaying = false;
+                startPlayback();
+            });
+
+            function startPlayback() {
+                if (isPlaying || tmpBuffer.length === 0) return;
+
+                isPlaying = true;
+                audioElement.src = tmpBuffer.shift();
+                audioElement.play();
+            }
+
+
+            let byteSum = 0;
+            let ws = new WebSocket("ws://" + location.host + "/ws"); // Adjust the WebSocket URL if needed
+
+            ws.onopen = () => {
+                console.log("WebSocket connection established.");
+            };
+
+            ws.onmessage = (message) => {
+                let msg = JSON.parse(message.data);
+                if (msg["error"]) {
+                    console.error(msg["error"]);
+                    return;
+                }
+
+                if (msg["article"]) {
+                    byteSum = 0;
+                    articleTxt.textContent = msg["article"];
+                    return;
+                }
+
+                if (msg["done"]) {
+                    // console.log("Done!");
+                    return;
+                }
+
+                if (msg["stream_url"]) {
+                    console.debug("Got chunk of audio: " + msg["stream_url"]);
+                    tmpBuffer.push(msg["stream_url"]);
+                }
+
+                startPlayback();
+
+            };
+            ws.onerror = (error) => {
+                console.error("WebSocket error:", error);
+            };
+
+            ws.onclose = () => {
+                console.log("WebSocket connection closed.");
+            };
+
+            function submitUrl() {
+                const url = input.value.trim();
+
+                if (!url) {
+                    alert("Please enter a URL.");
+                    return;
+                }
+
+                const payload = {
+                    config: {}, // Replace with actual settings 
+                    url: url
+                };
+                ws.send(JSON.stringify(payload));
+            }
+
+            submitBtn.addEventListener("click", submitUrl);
+            input.addEventListener("keyup", async (event) => {
+                if (event.key !== "Enter") return;
+                submitUrl();
+            });
+
+        });
+
+    </script>
+</body>
+
+</html>
