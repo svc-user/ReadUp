@@ -38,7 +38,7 @@ def getArticle(article_hash, markup):
     
     messages = [ {
                 "role": "user", 
-                "content": "Given the following website markup, return only the text of the site that is an article, blog post or similar. The ouput MUST be formatted as human readable text with no kind of markup. It's important to extract the article as verbatim as possible. If there are images include them by mentioning that there's an image and the images alt text - if any.\n-------\n"
+                "content": "Given the following website markup, return only the text of the site that is an article, blog post or similar. Include the title and date, if noted. The ouput MUST be formatted as human readable text with no kind of markup. It's important to extract the article as verbatim as possible.\n-------\n"
                     + markup
             }
         ]
@@ -69,17 +69,11 @@ def getArticle(article_hash, markup):
 
 
 async def tts_stream(article_hash, text, chunk_handler):
-
-    # player_stream = pyaudio.PyAudio().open(format=pyaudio.paInt16, channels=1, rate=24000, output=True)
     if (BASE_DIR / (article_hash + "_000." + FILE_FORMAT)).exists():
         files = glob.glob(str(BASE_DIR / (article_hash + "_*." + FILE_FORMAT)))
         for file in files:
             fn = pathlib.Path(file).name
             await chunk_handler({"stream_url": STREAM_BASE + fn})
-            # with open(file, "rb") as chunk:
-            #     while (audio_chunk := chunk.read(1024)):
-            #         await chunk_handler({"audio": list(audio_chunk)})
-                    # player_stream.write(audio_chunk)
         return
 
     in_text = text
@@ -96,8 +90,6 @@ async def tts_stream(article_hash, text, chunk_handler):
         fn = (article_hash + "_" + str(i).rjust(3, "0") + "." + FILE_FORMAT)
         out_path = BASE_DIR / fn
 
-        await chunk_handler({"stream_url": STREAM_BASE + fn})
-
         with open(out_path, 'wb') as out_file:
             with openai.audio.with_streaming_response.speech.create(
                 model="tts-1", 
@@ -105,9 +97,10 @@ async def tts_stream(article_hash, text, chunk_handler):
                 input=chunk,
                 response_format=FILE_FORMAT
             ) as tts_stream:
-                for audio_chunk in tts_stream.iter_bytes(chunk_size=1024):
+                for audio_chunk in tts_stream.iter_bytes(chunk_size=1024000):
                     out_file.write(audio_chunk)
-                    # await chunk_handler({"audio": list(audio_chunk)})
+
+        await chunk_handler({"stream_url": STREAM_BASE + fn})
 
 
 
@@ -119,17 +112,23 @@ async def do_heavy_lifting(url, stream_handler):
         os.mkdir(BASE_DIR)
 
     print("Fetching page at %s.." % url)
+    await stream_handler({"status":"Fetching page source.."})
     page_markup = getWebsite(url)
+
     article_hash = hashlib.sha256(page_markup.encode()).hexdigest()
     print("Article hash is: %s" % article_hash)
 
     print("Extracting text...")
+    await stream_handler({"status":"Extracting article text.."})
     article = getArticle(article_hash, page_markup)
-    print("Converting to speech...")
-    
     await stream_handler({"article": article})
+    
+    print("Converting to speech...")
+    await stream_handler({"status":"Converting to speech.."})
     await tts_stream(article_hash, article, stream_handler)
+    
     print("Done..")
+    await stream_handler({"status":"Conversion complete.."})
 
 
 async def _main():

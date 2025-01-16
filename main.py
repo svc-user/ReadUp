@@ -30,7 +30,6 @@ async def ws():
                 await websocket.send(json.dumps({"error": "Invalid input. URL is required."}))
                 return
 
-            # Fetch the TTS audio stream using readup.get_tts
             async def handler(chunk):
                 await websocket.send_json(chunk) # _send is just a proxy call to ASGIWebsocketConnection.send_data 
 
@@ -45,4 +44,4 @@ async def ws():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=1235)
+    app.run(debug=False, port=1235, host="0.0.0.0", threaded=True, use_reloader=False)
