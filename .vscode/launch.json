@@ -12,7 +12,6 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "https://www.dr.dk/nyheder/penge/ejere-af-40000-boliger-behandlet-efter-omstridt-paragraf-endnu-en-lortesag-skat"
             ],
             "envFile": "${workspaceFolder}/.env"
         }

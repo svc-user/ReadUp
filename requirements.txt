@@ -2,3 +2,4 @@ openai
 selenium
 pyaudio
 tiktoken
+quart
