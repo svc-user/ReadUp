@@ -6,7 +6,10 @@ A small python application for getting blog posts and news articles read out lou
 ### With Docker
 Run these two commands to get running.
 1) `docker build -t read-up .`
-2) `docker run --env-file .\.env -p 1235:1235 read-up`
+2) `docker run --env-file .\.env -d -p 1235:1235 read-up`
+
+#### Persisting the cache
+If you wish to persist already downloaded sites, text extractions and audio files you can add the parameter `-v local_folder_here:/app/articles` do your `docker run` command above.
 
 ### Without Docker
 If you don't have or want to use Docker you can run it without.
@@ -28,8 +31,11 @@ OPENAI_KEY=sk-proj-xxxxxxxxxxxxx...
 Get your API key [here](https://platform.openai.com/settings/organization/api-keys).
 
 
+
+
 ## Todo
  - [ ] Settings for voice
  - [ ] Settings for playback speed
  - [ ] Highlighting of (approximately) the currently read line/word
  - [ ] Prettiness 
+ - [ ] Configurable app settings
