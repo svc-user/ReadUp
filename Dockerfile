@@ -20,7 +20,7 @@ COPY . /app
 EXPOSE 1235
 
 # Define the command to run the application
-CMD ["python", "main.py"]
+CMD ["hypercorn", "-w", "4", "-b", "0.0.0.0:1235", "main.py"]
 
 
 # To build and run

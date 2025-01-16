@@ -13,7 +13,17 @@ STREAM_BASE = "/stream/"
 openai = OpenAI(api_key=API_KEY, project=PROJECT_ID)
 
 
-def getWebsite(site_url):
+def getWebsite(article_hash, site_url):
+    if (BASE_DIR / (article_hash + ".html")).exists():
+        with open(BASE_DIR / (article_hash + ".html"), "rt", encoding="utf8") as f:
+            cached = f.read()
+            if len(cached) == 0:
+                f.close()
+                os.remove((BASE_DIR / (article_hash + ".html")))
+                return getWebsite(article_hash, site_url)
+            
+            return cached
+        
     options = webdriver.FirefoxOptions()
     options.add_argument("-headless")
     driver = webdriver.Firefox(keep_alive=False, options=options)
@@ -22,16 +32,19 @@ def getWebsite(site_url):
     markup = body_elem.get_attribute('innerHTML')
     
     driver.quit()
+    with open(BASE_DIR / (article_hash + ".html"), "wt", encoding="utf8") as f:
+        f.write(markup)
+
     return markup
 
 
 def getArticle(article_hash, markup):
-    if (BASE_DIR / article_hash).exists():
-        with open(BASE_DIR / article_hash, "rt", encoding="utf8") as f:
+    if (BASE_DIR / (article_hash + ".txt")).exists():
+        with open(BASE_DIR / (article_hash + ".txt"), "rt", encoding="utf8") as f:
             cached = f.read()
             if len(cached) == 0:
                 f.close()
-                os.remove((BASE_DIR / article_hash))
+                os.remove((BASE_DIR / (article_hash + ".txt")))
                 return getArticle(article_hash, markup)
             
             return cached
@@ -65,7 +78,7 @@ def getArticle(article_hash, markup):
     )
 
     text = completion.choices[0].message.content
-    with open(BASE_DIR / article_hash, "wt", encoding="utf8") as f:
+    with open(BASE_DIR / (article_hash + ".txt"), "wt", encoding="utf8") as f:
         f.write(text)
     
     return text
@@ -81,8 +94,8 @@ async def tts_stream(article_hash, text, chunk_handler):
 
     in_text = text
     chunks = []
-    while(len(in_text) > 4000):
-        rspc = str.rindex(in_text[:4000], " ")
+    while(len(in_text) > 2000):
+        rspc = str.rindex(in_text[:2000], " ")
         chunks.append(in_text[:rspc])
         in_text = in_text[rspc+1:]
     else:
@@ -100,7 +113,7 @@ async def tts_stream(article_hash, text, chunk_handler):
                 input=chunk,
                 response_format=FILE_FORMAT
             ) as tts_stream:
-                for audio_chunk in tts_stream.iter_bytes(chunk_size=1024000):
+                for audio_chunk in tts_stream.iter_bytes(chunk_size=512000):
                     out_file.write(audio_chunk)
 
         await chunk_handler({"stream_url": STREAM_BASE + fn})
@@ -114,12 +127,13 @@ async def do_heavy_lifting(url, stream_handler):
     if not pathlib.Path(BASE_DIR).exists():
         os.mkdir(BASE_DIR)
 
+    article_hash = hashlib.sha256(url.encode()).hexdigest()
+    print("Article hash is: %s" % article_hash)
+
     print("Fetching page at %s.." % url)
     await stream_handler({"status":"Fetching page source.."})
-    page_markup = getWebsite(url)
+    page_markup = getWebsite(article_hash, url)
 
-    article_hash = hashlib.sha256(page_markup.encode()).hexdigest()
-    print("Article hash is: %s" % article_hash)
 
     print("Extracting text...")
     await stream_handler({"status":"Extracting article text.."})
