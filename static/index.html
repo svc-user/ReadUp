@@ -16,14 +16,47 @@
             background-color: #f4f4f4;
         }
 
-        .settings-button {
-            /* width: 100%; */
-            /* height: 100%; */
+        .text-small {
+            font-size: 1rem;
+            font-weight: 200;
         }
 
-        .settings-button-ctr {
-            vertical-align: middle;
-            /* text-align: center; */
+        .settings {
+            z-index: 1;
+
+            .settings-button {
+                position: fixed;
+                top: 5px;
+                left: 5px;
+                text-align: center;
+                transition: all 0.5s linear;
+            }
+
+            .settings-window-ctr {
+                position: fixed;
+                top: 5px;
+                left: 5px;
+                padding: 25px 15px;
+                background-color: #ddd;
+                border: 1px solid #bbb;
+                opacity: 0;
+                transition: all linear 0.5s,
+                    opacity linear 0.1s;
+            }
+
+            &.active {
+                .settings-window-ctr {
+                    height: 240px;
+                    width: 360px;
+                    opacity: 1;
+                }
+
+                .settings-button {
+                    padding: 5px;
+                    line-height: 10px;
+                    height: 25px;
+                }
+            }
         }
 
         .article-container {
@@ -39,6 +72,39 @@
 </head>
 
 <body>
+    <div class="settings">
+        <div class="settings-window-ctr">
+            <div class="row">
+                <div class="twelve columns">
+                    <label for="voiceInput">Voice
+                        <span class="text-small"> Hear the different voices <a href="https://platform.openai.com/docs/guides/text-to-speech#voice-options" target="_blank">here</a>.</span>
+                    </label>
+                    <select id="voiceInput" class="u-full-width">
+                        <option value="alloy">alloy</option>
+                        <option value="ash">ash</option>
+                        <option value="coral">coral</option>
+                        <option value="echo">echo</option>
+                        <option value="fable">fable</option>
+                        <option value="onyx">onyx</option>
+                        <option value="nova">nova</option>
+                        <option value="sage">sage</option>
+                        <option value="shimmer">shimmer</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <div class="twelve columns">
+                    <label class="">
+                        <input class="chk-nocache" type="checkbox">
+                        <span class="label-body">Bypass cache on next url</span>
+                      </label>
+                </div>
+            </div>
+        </div>
+        <a class="settings-button button" title="Settings">
+            <i class="hgi-stroke hgi-settings-02"></i>
+        </a>
+    </div>
     <div class="container">
         <div class="row">
             <div class="one column">&nbsp;</div>
@@ -49,11 +115,6 @@
             <div class="one column submit-button-ctr">
                 <a class="submit-button button button-primary" title="Submit">
                     <i class="hgi-stroke hgi-arrow-right-01"></i>
-                </a>
-            </div>
-            <div class="one column setting-button-ctr">
-                <a class="settings-button button" title="Settings">
-                    <i class="hgi-stroke hgi-settings-02"></i>
                 </a>
             </div>
         </div>
@@ -85,6 +146,10 @@
             const articleTxt = document.querySelector(".article-text");
             const audioElement = document.querySelector('.audio-player');
             const statusTxt = document.querySelector('.label-status');
+            const settingsBtn = document.querySelector(".settings-button");
+            const settingsCtr = document.querySelector(".settings");
+            const voiceSelector = document.querySelector("#voiceInput");
+            const noCacheChk = document.querySelector(".chk-nocache");
 
             let isPlaying = false;
             let tmpBuffer = [];
@@ -130,7 +195,7 @@
                     return;
                 }
 
-                if(msg["status"]) {
+                if (msg["status"]) {
                     statusTxt.textContent = msg["status"];
                 }
 
@@ -160,14 +225,42 @@
                     return;
                 }
 
+                tmpBuffer = [];
+                audioElement.pause();
+                audioElement.currentTime = 0;
+
+                let selected_voice = voiceSelector.options[voiceSelector.selectedIndex].value;
                 const payload = {
-                    config: {}, // Replace with actual settings 
+                    config: {
+                        voice: selected_voice,
+                        no_cache: noCacheChk.checked,
+                    }, 
                     url: url
                 };
                 ws.send(JSON.stringify(payload));
+                
+                noCacheChk.checked = false;
+                settingsCtr.classList.remove("active");
+                localStorage["voice"] = selected_voice;
+            }
+
+            
+            for(let i = 0; i < voiceSelector.options.length; i++) {
+                if(voiceSelector.options[i].value === localStorage["voice"]) {
+                    voiceSelector.selectedIndex = i;
+                }
             }
 
             submitBtn.addEventListener("click", submitUrl);
+            settingsBtn.onclick = () => {
+                if (settingsCtr.classList.contains("active")) {
+                    settingsCtr.classList.remove("active");
+                }
+                else {
+                    settingsCtr.classList.add("active");
+                }
+            };
+
         });
 
     </script>

@@ -12,7 +12,7 @@ async def index():
 
 @app.route('/stream/<string:path>')
 async def stream_file(path):
-    return await send_from_directory('articles', path)
+    return await send_from_directory('articles', path, cache_timeout=-1)
 
 # WebSocket endpoint
 @app.websocket('/ws')
@@ -33,7 +33,7 @@ async def ws():
             async def handler(chunk):
                 await websocket.send_json(chunk) # _send is just a proxy call to ASGIWebsocketConnection.send_data 
 
-            await core.do_heavy_lifting(url, handler)
+            await core.do_heavy_lifting(url, config, handler)
 
             await websocket.send_json({"done": "done"})
 
@@ -44,4 +44,4 @@ async def ws():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=1235, host="0.0.0.0", use_reloader=False)
+    app.run(debug=True, port=1234, host="0.0.0.0", use_reloader=True)

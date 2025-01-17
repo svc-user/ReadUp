@@ -34,9 +34,9 @@ Get your API key [here](https://platform.openai.com/settings/organization/api-ke
 
 
 ## Todo
- - [ ] Settings for voice
+ - [x] Settings for voice
  - [ ] Settings for playback speed
  - [ ] Highlighting of (approximately) the currently read line/word
  - [ ] Prettiness 
  - [ ] Configurable app settings
- - [ ] Not needing to refresh after each article 😅
+ - [x] Not needing to refresh after each article 😅

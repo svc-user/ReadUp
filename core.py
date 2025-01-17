@@ -84,7 +84,7 @@ def getArticle(article_hash, markup):
     return text
 
 
-async def tts_stream(article_hash, text, chunk_handler):
+async def tts_stream(article_hash, text, voice_in, chunk_handler):
     if (BASE_DIR / (article_hash + "_000." + FILE_FORMAT)).exists():
         files = glob.glob(str(BASE_DIR / (article_hash + "_*." + FILE_FORMAT)))
         for file in files:
@@ -109,7 +109,7 @@ async def tts_stream(article_hash, text, chunk_handler):
         with open(out_path, 'wb') as out_file:
             with openai.audio.with_streaming_response.speech.create(
                 model="tts-1", 
-                voice="onyx",
+                voice=voice_in,
                 input=chunk,
                 response_format=FILE_FORMAT
             ) as tts_stream:
@@ -119,15 +119,23 @@ async def tts_stream(article_hash, text, chunk_handler):
         await chunk_handler({"stream_url": STREAM_BASE + fn})
 
 
+def clear_cache(article_hash):
+    files = glob.glob(str(BASE_DIR / (article_hash + "*")))
+    for file in files:
+        os.remove(file)
 
 
-async def do_heavy_lifting(url, stream_handler):
+async def do_heavy_lifting(url, config, stream_handler):
     # url = sys.argv[1]
 
     if not pathlib.Path(BASE_DIR).exists():
         os.mkdir(BASE_DIR)
 
     article_hash = hashlib.sha256(url.encode()).hexdigest()
+
+    if config["no_cache"] == True:
+        clear_cache(article_hash)
+
     print("Article hash is: %s" % article_hash)
 
     print("Fetching page at %s.." % url)
@@ -140,9 +148,11 @@ async def do_heavy_lifting(url, stream_handler):
     article = getArticle(article_hash, page_markup)
     await stream_handler({"article": article})
     
+    voice = config["voice"]
+
     print("Converting to speech...")
-    await stream_handler({"status":"Converting to speech.."})
-    await tts_stream(article_hash, article, stream_handler)
+    await stream_handler({"status":"Converting to speech using the '%s' voice.." % voice})
+    await tts_stream(article_hash, article, voice, stream_handler)
     
     print("Done..")
     await stream_handler({"status":"Conversion complete.."})
