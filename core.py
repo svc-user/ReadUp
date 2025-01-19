@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import asyncio
 import tiktoken
-import os, sys, pathlib, hashlib, glob
+import os, re, pathlib, hashlib, glob
 
 API_KEY = os.environ["OPENAI_KEY"]
 PROJECT_ID = os.environ["PROJECT_ID"] 
@@ -85,21 +85,25 @@ def getArticle(article_hash, markup):
 
 
 async def tts_stream(article_hash, text, voice_in, chunk_handler):
+    chunks = []
+    while(len(text) > 2000):
+        rspc = str.rindex(text[:2000], " ")
+        chunks.append(text[:rspc])
+        text = text[rspc+1:]
+    else:
+        chunks.append(text)
+
+
     if (BASE_DIR / (article_hash + "_000." + FILE_FORMAT)).exists():
         files = glob.glob(str(BASE_DIR / (article_hash + "_*." + FILE_FORMAT)))
-        for file in files:
+        files = [(i, f) for i, f in enumerate(files)]
+        for (i, file) in files:
+            wc = len([c for c in re.split(' |\n', chunks[i]) if not c.isspace()])
             fn = pathlib.Path(file).name
-            await chunk_handler({"stream_url": STREAM_BASE + fn})
+            await chunk_handler({"stream_url": STREAM_BASE + fn, "wc": wc})
         return
 
-    in_text = text
-    chunks = []
-    while(len(in_text) > 2000):
-        rspc = str.rindex(in_text[:2000], " ")
-        chunks.append(in_text[:rspc])
-        in_text = in_text[rspc+1:]
-    else:
-        chunks.append(in_text)
+
 
     chunks = [(i, c) for i, c in enumerate(chunks)]
     for i, chunk in chunks:
@@ -115,8 +119,9 @@ async def tts_stream(article_hash, text, voice_in, chunk_handler):
             ) as tts_stream:
                 for audio_chunk in tts_stream.iter_bytes(chunk_size=512000):
                     out_file.write(audio_chunk)
-
-        await chunk_handler({"stream_url": STREAM_BASE + fn})
+                    
+        wc = len([c for c in re.split(' |\n', chunks[i]) if not c.isspace()])
+        await chunk_handler({"stream_url": STREAM_BASE + fn, "wc": wc})
 
 
 def clear_cache(article_hash):
@@ -133,7 +138,8 @@ async def do_heavy_lifting(url, config, stream_handler):
 
     article_hash = hashlib.sha256(url.encode()).hexdigest()
 
-    if config["no_cache"] == True:
+    no_cache = config["no_cache"] if "no_cache" in config  else False
+    if no_cache == True:
         clear_cache(article_hash)
 
     print("Article hash is: %s" % article_hash)
@@ -148,7 +154,7 @@ async def do_heavy_lifting(url, config, stream_handler):
     article = getArticle(article_hash, page_markup)
     await stream_handler({"article": article})
     
-    voice = config["voice"]
+    voice = config["voice"] if "voice" in config else "alloy"
 
     print("Converting to speech...")
     await stream_handler({"status":"Converting to speech using the '%s' voice.." % voice})
@@ -159,10 +165,12 @@ async def do_heavy_lifting(url, config, stream_handler):
 
 
 async def _main():
+    import json
     async def mock_handler(chunk):
-        pass
+        print("HANDLER: ")
+        print(json.dumps(chunk, indent=2))
 
-    await do_heavy_lifting("https://blog.yoshuawuyts.com/gen-auto-trait-problem/", mock_handler)
+    await do_heavy_lifting("https://blog.yoshuawuyts.com/gen-auto-trait-problem/", {}, mock_handler)
 
 if __name__ == "__main__":
     asyncio.run(_main())

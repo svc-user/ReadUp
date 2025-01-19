@@ -159,19 +159,32 @@
                 startPlayback();
             });
 
-            // onyx = 2.75 wps
+            let wordOffset = 0;
             function startPlayback() {
                 if (isPlaying || tmpBuffer.length === 0) return;
 
+                let audioMsg = tmpBuffer.unshift();
                 isPlaying = true;
-                audioElement.src = tmpBuffer.shift();
+                audioElement.src = audioMsg["stream_url"];
                 audioElement.play();
+
+                let playBackStart = +new Date;
+                audioElement.onloadedmetadata = () => {
+                    let duration = audioElement.duration;
+                    let wps = audioMsg.wc / duration;
+
+                    setInterval(() => {
+                        let elapsed = ((+new Date) - playBackStart) / 1000;
+                        let indxword = elapsed * wps;
+                        
+                        
+                    }, 1000);
+
+                };
             }
 
 
-            let byteSum = 0;
-            let ws = new WebSocket("ws://" + location.host + "/ws"); // Adjust the WebSocket URL if needed
-
+            let ws = new WebSocket("ws://" + location.host + "/ws"); 
             ws.onopen = () => {
                 console.log("WebSocket connection established.");
             };
@@ -184,13 +197,12 @@
                 }
 
                 if (msg["article"]) {
-                    byteSum = 0;
                     articleTxt.textContent = msg["article"];
                     return;
                 }
 
                 if (msg["done"]) {
-                    // console.log("Done!");
+                    console.log("Done!");
                     statusTxt.style.display = "none";
                     return;
                 }
@@ -200,8 +212,8 @@
                 }
 
                 if (msg["stream_url"]) {
-                    console.debug("Got chunk of audio: " + msg["stream_url"]);
-                    tmpBuffer.push(msg["stream_url"]);
+                    console.debug("Got chunk of audio: ", msg);
+                    tmpBuffer.push(msg);
 
                     startPlayback();
                 }
