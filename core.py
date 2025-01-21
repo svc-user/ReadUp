@@ -84,14 +84,40 @@ def getArticle(article_hash, markup):
     return text
 
 
+def get_word_indices_and_lengths(text):
+    result = []
+    word_start = None  # Tracks the start index of a word
+
+    for i, char in enumerate(text):
+        if not char.isspace():  # Character is part of a word
+            if word_start is None:
+                word_start = i  # Mark the start of the word
+        else:  # Character is whitespace
+            if word_start is not None:
+                # Calculate the word length and append the tuple
+                word_length = i - word_start
+                result.append((word_start, word_length))
+                word_start = None  # Reset the word start
+
+    # Handle the last word if it ends without trailing whitespace
+    if word_start is not None:
+        word_length = len(text) - word_start
+        result.append((word_start, word_length))
+
+    return result
+
+
 async def tts_stream(article_hash, text, voice_in, chunk_handler):
+
     chunks = []
     while(len(text) > 2000):
         rspc = str.rindex(text[:2000], " ")
-        chunks.append(text[:rspc])
+        highlights = get_word_indices_and_lengths(text[:rspc])
+        chunks.append((text[:rspc], highlights))
         text = text[rspc+1:]
     else:
-        chunks.append(text)
+        highlights = get_word_indices_and_lengths(text)
+        chunks.append((text, highlights))
 
 
     if (BASE_DIR / (article_hash + "_000." + FILE_FORMAT)).exists():
@@ -99,15 +125,13 @@ async def tts_stream(article_hash, text, voice_in, chunk_handler):
         files = [(i, f) for i, f in enumerate(files)]
         for (i, file) in files:
             fn = pathlib.Path(file).name
-            all_words = re.findall(r'\w*\S', chunks[i])
-            [word.pos for word in all_words]
-            await chunk_handler({"stream_url": STREAM_BASE + fn, "wc": wc})
+            await chunk_handler({"stream_url": STREAM_BASE + fn, "highlights": chunks[i][1]})
         return
 
 
 
     chunks = [(i, c) for i, c in enumerate(chunks)]
-    for i, chunk in chunks:
+    for i, (chunk, highlights) in chunks:
         fn = (article_hash + "_" + str(i).rjust(3, "0") + "." + FILE_FORMAT)
         out_path = BASE_DIR / fn
 
@@ -121,8 +145,7 @@ async def tts_stream(article_hash, text, voice_in, chunk_handler):
                 for audio_chunk in tts_stream.iter_bytes(chunk_size=512000):
                     out_file.write(audio_chunk)
 
-        wc = len([c for c in re.split(' |\n', chunk) if not c.isspace()])
-        await chunk_handler({"stream_url": STREAM_BASE + fn, "wc": wc})
+        await chunk_handler({"stream_url": STREAM_BASE + fn, "hightlights": highlights})
 
 
 def clear_cache(article_hash):

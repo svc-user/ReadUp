@@ -72,7 +72,6 @@
                 background-color: #f0a;
             }
         }
-
     </style>
 </head>
 
@@ -82,7 +81,9 @@
             <div class="row">
                 <div class="twelve columns">
                     <label for="voiceInput">Voice
-                        <span class="text-small"> Hear the different voices <a href="https://platform.openai.com/docs/guides/text-to-speech#voice-options" target="_blank">here</a>.</span>
+                        <span class="text-small"> Hear the different voices <a
+                                href="https://platform.openai.com/docs/guides/text-to-speech#voice-options"
+                                target="_blank">here</a>.</span>
                     </label>
                     <select id="voiceInput" class="u-full-width">
                         <option value="alloy">alloy</option>
@@ -102,7 +103,7 @@
                     <label class="">
                         <input class="chk-nocache" type="checkbox">
                         <span class="label-body">Bypass cache on next url</span>
-                      </label>
+                    </label>
                 </div>
             </div>
         </div>
@@ -161,44 +162,53 @@
 
             audioElement.addEventListener("ended", () => {
                 isPlaying = false;
+                clearInterval(highlightInterval);
                 startPlayback();
             });
 
+            let highlightInterval = 0;
             let wordOffset = 0;
             function startPlayback() {
                 if (isPlaying || tmpBuffer.length === 0) return;
 
-                let playBackStart = +new Date;
-                audioElement.onloadedmetadata = () => {
-                    let duration = audioElement.duration;
-                    let wps = audioMsg.wc / duration;
-
-                    const articleWords = articleTxt.textContent.split(/ |\n/).filter(w => w != '');
-                    setInterval(() => {
-                        CSS.highlights.remove("current-word");
-                        let elapsed = ((+new Date) - playBackStart) / 1000;
-                        let indxword = elapsed * wps;
-                        let range = new Range();
-                        range.setStart(articleTxt, indxword);
-                        range.setEnd(articleTxt, indxword + 10);
-
-                        const highlight = new Highlight(range);
-                        CSS.highlights.set("current-word", highlight);
-
-                    }, 1000);
-
-                };
-
                 let audioMsg = tmpBuffer.pop();
+                if (CSS.highlights) {
+
+                    let playBackStart = +new Date;
+                    audioElement.onloadedmetadata = () => {
+                        let duration = audioElement.duration;
+                        let wps = audioMsg["highlights"].length / duration;
+
+                        highlightInterval = setInterval(() => {
+                            if (CSS.highlights.has("current-word")) {
+                                CSS.highlights.delete("current-word");
+                            }
+
+                            let elapsed = ((+new Date) - playBackStart) / 1000;
+                            let indxword = Math.floor(elapsed * wps);
+                            let hlrange = audioMsg["highlights"][indxword];
+
+                            let range = new Range();
+                            range.setStart(articleTxt.firstChild, hlrange[0]);
+                            range.setEnd(articleTxt.firstChild, hlrange[0] + hlrange[1]);
+
+                            const highlight = new Highlight(range);
+                            CSS.highlights.set("current-word", highlight);
+
+                        }, 10);
+
+                    };
+                }
+
                 isPlaying = true;
                 audioElement.src = audioMsg["stream_url"];
                 audioElement.play();
 
-                
+
             }
 
 
-            let ws = new WebSocket("ws://" + location.host + "/ws"); 
+            let ws = new WebSocket("ws://" + location.host + "/ws");
             ws.onopen = () => {
                 console.log("WebSocket connection established.");
             };
@@ -261,19 +271,19 @@
                     config: {
                         voice: selected_voice,
                         no_cache: noCacheChk.checked,
-                    }, 
+                    },
                     url: url
                 };
                 ws.send(JSON.stringify(payload));
-                
+
                 noCacheChk.checked = false;
                 settingsCtr.classList.remove("active");
                 localStorage["voice"] = selected_voice;
             }
 
-            
-            for(let i = 0; i < voiceSelector.options.length; i++) {
-                if(voiceSelector.options[i].value === localStorage["voice"]) {
+
+            for (let i = 0; i < voiceSelector.options.length; i++) {
+                if (voiceSelector.options[i].value === localStorage["voice"]) {
                     voiceSelector.selectedIndex = i;
                 }
             }
