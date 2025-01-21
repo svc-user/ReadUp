@@ -67,7 +67,12 @@
         .article-text {
             white-space: pre-line;
             padding: 10px;
+
+            &::highlight(current-word) {
+                background-color: #f0a;
+            }
         }
+
     </style>
 </head>
 
@@ -163,24 +168,33 @@
             function startPlayback() {
                 if (isPlaying || tmpBuffer.length === 0) return;
 
-                let audioMsg = tmpBuffer.unshift();
-                isPlaying = true;
-                audioElement.src = audioMsg["stream_url"];
-                audioElement.play();
-
                 let playBackStart = +new Date;
                 audioElement.onloadedmetadata = () => {
                     let duration = audioElement.duration;
                     let wps = audioMsg.wc / duration;
 
+                    const articleWords = articleTxt.textContent.split(/ |\n/).filter(w => w != '');
                     setInterval(() => {
+                        CSS.highlights.remove("current-word");
                         let elapsed = ((+new Date) - playBackStart) / 1000;
                         let indxword = elapsed * wps;
-                        
-                        
+                        let range = new Range();
+                        range.setStart(articleTxt, indxword);
+                        range.setEnd(articleTxt, indxword + 10);
+
+                        const highlight = new Highlight(range);
+                        CSS.highlights.set("current-word", highlight);
+
                     }, 1000);
 
                 };
+
+                let audioMsg = tmpBuffer.pop();
+                isPlaying = true;
+                audioElement.src = audioMsg["stream_url"];
+                audioElement.play();
+
+                
             }
 
 
@@ -239,6 +253,7 @@
 
                 tmpBuffer = [];
                 audioElement.pause();
+                isPlaying = false;
                 audioElement.currentTime = 0;
 
                 let selected_voice = voiceSelector.options[voiceSelector.selectedIndex].value;

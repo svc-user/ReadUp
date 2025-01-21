@@ -39,6 +39,7 @@ async def ws():
 
 
         except Exception as e:
+            print(str(e.with_traceback()))
             await websocket.send(json.dumps({"error": str(e)}))
 
 

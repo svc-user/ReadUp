@@ -98,8 +98,9 @@ async def tts_stream(article_hash, text, voice_in, chunk_handler):
         files = glob.glob(str(BASE_DIR / (article_hash + "_*." + FILE_FORMAT)))
         files = [(i, f) for i, f in enumerate(files)]
         for (i, file) in files:
-            wc = len([c for c in re.split(' |\n', chunks[i]) if not c.isspace()])
             fn = pathlib.Path(file).name
+            all_words = re.findall(r'\w*\S', chunks[i])
+            [word.pos for word in all_words]
             await chunk_handler({"stream_url": STREAM_BASE + fn, "wc": wc})
         return
 
@@ -119,8 +120,8 @@ async def tts_stream(article_hash, text, voice_in, chunk_handler):
             ) as tts_stream:
                 for audio_chunk in tts_stream.iter_bytes(chunk_size=512000):
                     out_file.write(audio_chunk)
-                    
-        wc = len([c for c in re.split(' |\n', chunks[i]) if not c.isspace()])
+
+        wc = len([c for c in re.split(' |\n', chunk) if not c.isspace()])
         await chunk_handler({"stream_url": STREAM_BASE + fn, "wc": wc})
 
 
