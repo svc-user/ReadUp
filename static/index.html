@@ -92,6 +92,14 @@
                     </select>
                 </div>
             </div>
+            <div class="row">
+                <div class="twelve columns">
+                    <label for="playbackSpeed">
+                        Playback speed (<span class="text-small playback-speed-label"></span>)
+                    </label>
+                    <input type="range" id="playbackSpeed" max="2" min="0.25" value="1" step="0.25" />
+                </div>
+            </div>
             <div>
                 <div class="twelve columns">
                     <label class="">
@@ -150,6 +158,8 @@
             const settingsCtr = document.querySelector(".settings");
             const voiceSelector = document.querySelector("#voiceInput");
             const noCacheChk = document.querySelector(".chk-nocache");
+            const playbackSpeedRng = document.querySelector("#playbackSpeed");
+            const playbackSpeedLbl = document.querySelector(".playback-speed-label");
 
             let isPlaying = false;
             let tmpBuffer = [];
@@ -250,6 +260,23 @@
                     voiceSelector.selectedIndex = i;
                 }
             }
+
+
+            if(localStorage["playbackSpeed"]) {
+                playbackSpeedRng.value = localStorage["playbackSpeed"];
+            } else {
+                playbackSpeedRng.value = "1";
+            }
+
+            playbackSpeedLbl.textContent = playbackSpeedRng.value + "x";
+            audioElement.playbackRate = playbackSpeedRng.value;
+
+            playbackSpeedRng.onchange = () => {
+                localStorage["playbackSpeed"] = playbackSpeedRng.value;
+                audioElement.playbackRate = playbackSpeedRng.value;
+                playbackSpeedLbl.textContent = playbackSpeedRng.value + "x";
+            };
+
 
             submitBtn.addEventListener("click", submitUrl);
             settingsBtn.onclick = () => {

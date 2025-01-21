@@ -111,6 +111,7 @@ async def tts_stream(article_hash, text, voice_in, chunk_handler):
                 model="tts-1", 
                 voice=voice_in,
                 input=chunk,
+                speed=1,
                 response_format=FILE_FORMAT
             ) as tts_stream:
                 for audio_chunk in tts_stream.iter_bytes(chunk_size=512000):
