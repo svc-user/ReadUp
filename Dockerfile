@@ -8,10 +8,9 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Firefox to get page sources
-RUN apt-get update && apt-get install -y firefox-esr
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && apt-get install -y firefox-esr \
+    && apt-get clean \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy everything except the "articles" folder
 COPY . /app

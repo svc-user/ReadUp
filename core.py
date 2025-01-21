@@ -13,14 +13,15 @@ STREAM_BASE = "/stream/"
 openai = OpenAI(api_key=API_KEY, project=PROJECT_ID)
 
 
-def getWebsite(article_hash, site_url):
-    if (BASE_DIR / (article_hash + ".html")).exists():
-        with open(BASE_DIR / (article_hash + ".html"), "rt", encoding="utf8") as f:
+def get_website(article_hash, site_url):
+    HTML_EXT = ".html"
+    if (BASE_DIR / (article_hash + HTML_EXT)).exists():
+        with open(BASE_DIR / (article_hash + HTML_EXT), "rt", encoding="utf8") as f:
             cached = f.read()
             if len(cached) == 0:
                 f.close()
-                os.remove((BASE_DIR / (article_hash + ".html")))
-                return getWebsite(article_hash, site_url)
+                os.remove((BASE_DIR / (article_hash + HTML_EXT)))
+                return get_website(article_hash, site_url)
             
             return cached
         
@@ -32,20 +33,20 @@ def getWebsite(article_hash, site_url):
     markup = body_elem.get_attribute('innerHTML')
     
     driver.quit()
-    with open(BASE_DIR / (article_hash + ".html"), "wt", encoding="utf8") as f:
+    with open(BASE_DIR / (article_hash + HTML_EXT), "wt", encoding="utf8") as f:
         f.write(markup)
 
     return markup
 
 
-def getArticle(article_hash, markup):
+def get_article_body(article_hash, markup):
     if (BASE_DIR / (article_hash + ".txt")).exists():
         with open(BASE_DIR / (article_hash + ".txt"), "rt", encoding="utf8") as f:
             cached = f.read()
             if len(cached) == 0:
                 f.close()
                 os.remove((BASE_DIR / (article_hash + ".txt")))
-                return getArticle(article_hash, markup)
+                return get_article_body(article_hash, markup)
             
             return cached
     
@@ -115,9 +116,10 @@ async def tts_stream(article_hash, text, voice_in, chunk_handler):
         highlights = get_word_indices_and_lengths(text[:rspc])
         chunks.append((text[:rspc], highlights))
         text = text[rspc+1:]
-    else:
-        highlights = get_word_indices_and_lengths(text)
-        chunks.append((text, highlights))
+    
+    highlights = get_word_indices_and_lengths(text)
+    chunks.append((text, highlights))
+        
 
 
     if (BASE_DIR / (article_hash + "_000." + FILE_FORMAT)).exists():
@@ -156,8 +158,6 @@ def clear_cache(article_hash):
 
 
 async def do_heavy_lifting(url, config, stream_handler):
-    # url = sys.argv[1]
-
     if not pathlib.Path(BASE_DIR).exists():
         os.mkdir(BASE_DIR)
 
@@ -171,12 +171,12 @@ async def do_heavy_lifting(url, config, stream_handler):
 
     print("Fetching page at %s.." % url)
     await stream_handler({"status":"Fetching page source.."})
-    page_markup = getWebsite(article_hash, url)
+    page_markup = get_website(article_hash, url)
 
 
     print("Extracting text...")
     await stream_handler({"status":"Extracting article text.."})
-    article = getArticle(article_hash, page_markup)
+    article = get_article_body(article_hash, page_markup)
     await stream_handler({"article": article})
     
     voice = config["voice"] if "voice" in config else "alloy"
