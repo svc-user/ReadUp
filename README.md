@@ -9,7 +9,7 @@ Run these two commands to get running.
 2) `docker run --env-file .\.env -d -p 1235:1235 read-up`
 
 #### Persisting the cache
-If you wish to persist already downloaded sites, text extractions and audio files you can add the parameter `-v local_folder_here:/app/articles` do your `docker run` command above.
+If you wish to persist already downloaded sites, text extractions and audio files you can add the parameter `-v local_folder_here:/app/articles` to your `docker run` command above.
 
 ### Without Docker
 If you don't have or want to use Docker you can run it without.
