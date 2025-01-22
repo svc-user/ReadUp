@@ -198,12 +198,12 @@
                                 CSS.highlights.delete("current-word");
                             }
 
-                            let elapsed = audioElement.currentTime; // ((+new Date) - playBackStart) / 1000;
+                            let elapsed = audioElement.currentTime; 
                             let indxword = Math.min(Math.floor(elapsed * wps), highlights.length - 1);
 
                             let rangeStart = null;
                             let rangeLength = 0;
-                            for (i = Math.max(0, indxword - 3); i < Math.min(highlights.length - 1, indxword + 3); i++) {
+                            for (let i = Math.max(0, indxword - 3); i < Math.min(highlights.length - 1, indxword + 3); i++) {
                                 if (rangeStart == null) {
                                     rangeStart = highlights[i][0];
                                 }
