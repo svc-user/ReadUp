@@ -42,6 +42,7 @@
                 opacity: 0;
                 transition: all linear 0.5s,
                     opacity linear 0.1s;
+                pointer-events: none;
             }
 
             &.active {
@@ -49,6 +50,7 @@
                     height: 240px;
                     width: 360px;
                     opacity: 1;
+                    pointer-events: all;
                 }
 
                 .settings-button {
@@ -168,45 +170,57 @@
 
             let isPlaying = false;
             let tmpBuffer = [];
+            let highlightInterval = 0;
 
             audioElement.addEventListener("ended", () => {
                 isPlaying = false;
                 clearInterval(highlightInterval);
+
                 startPlayback();
             });
 
-            let highlightInterval = 0;
-            let wordOffset = 0;
             function startPlayback() {
                 if (isPlaying || tmpBuffer.length === 0) return;
 
-                let audioMsg = tmpBuffer.pop();
+                let audioMsg = tmpBuffer[0];
+                tmpBuffer = tmpBuffer.splice(1);
                 if (CSS.highlights) {
+                    let highlights = audioMsg["highlights"];
 
-                    let playBackStart = +new Date;
-                    audioElement.onloadedmetadata = () => {
+                    audioElement.onloadedmetadata = function () {
                         let duration = audioElement.duration;
-                        let wps = audioMsg["highlights"].length / duration;
+                        let wps = highlights.length / duration;
+
+                        console.debug("new audio: dur=" + audioElement.duration, "wps=" + wps, "hl_offset(first)=" + highlights[0][0], "hl_offset(last)=" + highlights[highlights.length - 1][0], "hl_length=" + highlights.length);
 
                         highlightInterval = setInterval(() => {
                             if (CSS.highlights.has("current-word")) {
                                 CSS.highlights.delete("current-word");
                             }
 
-                            let elapsed = ((+new Date) - playBackStart) / 1000;
-                            let indxword = Math.floor(elapsed * wps);
-                            let hlrange = audioMsg["highlights"][indxword];
+                            let elapsed = audioElement.currentTime; // ((+new Date) - playBackStart) / 1000;
+                            let indxword = Math.min(Math.floor(elapsed * wps), highlights.length - 1);
+
+                            let rangeStart = null;
+                            let rangeLength = 0;
+                            for (i = Math.max(0, indxword - 3); i < Math.min(highlights.length - 1, indxword + 3); i++) {
+                                if (rangeStart == null) {
+                                    rangeStart = highlights[i][0];
+                                }
+                                rangeLength += highlights[i][1];
+                            }
+
 
                             let range = new Range();
-                            range.setStart(articleTxt.firstChild, hlrange[0]);
-                            range.setEnd(articleTxt.firstChild, hlrange[0] + hlrange[1]);
+                            range.setStart(articleTxt.firstChild, rangeStart);
+                            range.setEnd(articleTxt.firstChild, rangeStart + rangeLength);
 
                             const highlight = new Highlight(range);
                             CSS.highlights.set("current-word", highlight);
 
-                        }, 10);
+                        }, 200);
 
-                    };
+                    }
                 }
 
                 isPlaying = true;
@@ -298,18 +312,18 @@
             }
 
 
-            if(localStorage["playbackSpeed"]) {
+            if (localStorage["playbackSpeed"]) {
                 playbackSpeedRng.value = localStorage["playbackSpeed"];
             } else {
                 playbackSpeedRng.value = "1";
             }
 
             playbackSpeedLbl.textContent = playbackSpeedRng.value + "x";
-            audioElement.playbackRate = playbackSpeedRng.value;
+            audioElement.playbackRate = parseFloat(playbackSpeedRng.value);
 
             playbackSpeedRng.onchange = () => {
                 localStorage["playbackSpeed"] = playbackSpeedRng.value;
-                audioElement.playbackRate = playbackSpeedRng.value;
+                audioElement.playbackRate = parseFloat(playbackSpeedRng.value);
                 playbackSpeedLbl.textContent = playbackSpeedRng.value + "x";
             };
 

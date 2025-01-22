@@ -85,7 +85,7 @@ def get_article_body(article_hash, markup):
     return text
 
 
-def get_word_indices_and_lengths(text):
+def get_word_indices_and_lengths(text, offset):
     result = []
     word_start = None  # Tracks the start index of a word
 
@@ -97,13 +97,13 @@ def get_word_indices_and_lengths(text):
             if word_start is not None:
                 # Calculate the word length and append the tuple
                 word_length = i - word_start
-                result.append((word_start, word_length))
+                result.append((offset + word_start, word_length))
                 word_start = None  # Reset the word start
 
     # Handle the last word if it ends without trailing whitespace
     if word_start is not None:
         word_length = len(text) - word_start
-        result.append((word_start, word_length))
+        result.append((offset + word_start, word_length))
 
     return result
 
@@ -111,13 +111,15 @@ def get_word_indices_and_lengths(text):
 async def tts_stream(article_hash, text, voice_in, chunk_handler):
 
     chunks = []
+    hl_offset = 0
     while(len(text) > 2000):
         rspc = str.rindex(text[:2000], " ")
-        highlights = get_word_indices_and_lengths(text[:rspc])
+        highlights = get_word_indices_and_lengths(text[:rspc], hl_offset)
+        hl_offset = highlights[-1][0] + highlights[-1][1] + 1
         chunks.append((text[:rspc], highlights))
         text = text[rspc+1:]
     
-    highlights = get_word_indices_and_lengths(text)
+    highlights = get_word_indices_and_lengths(text, hl_offset)
     chunks.append((text, highlights))
         
 
@@ -148,7 +150,7 @@ async def tts_stream(article_hash, text, voice_in, chunk_handler):
                 for audio_chunk in tts_stream.iter_bytes(chunk_size=512000):
                     out_file.write(audio_chunk)
 
-        await chunk_handler({"stream_url": STREAM_BASE + fn, "hightlights": highlights})
+        await chunk_handler({"stream_url": STREAM_BASE + fn, "highlights": highlights})
 
 
 def clear_cache(article_hash):
