@@ -1,4 +1,4 @@
-openai
-selenium
-tiktoken
-quart
+openai==1.60.0
+selenium==4.28.0
+tiktoken==0.8.0
+quart==0.20.0
